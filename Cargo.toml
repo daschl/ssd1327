@@ -3,6 +3,12 @@ name = "ssd1327"
 version = "0.1.0"
 authors = ["Michael Nitschinger <michael@nitschinger.at>"]
 edition = "2018"
+categories = ["embedded", "no-std"]
+description = "I2C driver for the SSD1327 OLED display controller"
+documentation = "https://docs.rs/ssd1327"
+keywords = ["no-std", "ssd1327", "oled", "embedded", "embedded-hal-driver"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/daschl/ssd1327"
 
 [dependencies]
 display-interface = "0.4"
