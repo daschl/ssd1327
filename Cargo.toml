@@ -1,0 +1,10 @@
+[package]
+name = "ssd1327"
+version = "0.1.0"
+authors = ["Michael Nitschinger <michael@nitschinger.at>"]
+edition = "2018"
+
+[dependencies]
+display-interface = "0.4"
+embedded-graphics = "0.6"
+embedded-hal = "0.2"
