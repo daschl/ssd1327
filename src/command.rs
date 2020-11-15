@@ -2,15 +2,26 @@
 
 use display_interface::{DataFormat::U8, DisplayError, WriteOnlyDataCommand};
 
+/// Holds commands which can be sent to the display.
 pub enum Command {
     /// Turn display off (0xAE)
     DisplayOff,
     /// Turn display on (0xAF)
     DisplayOn,
     /// Set up column start and end address (0x15)
-    ColumnAddress { start: u8, end: u8 },
+    ColumnAddress {
+        /// The start column address
+        start: u8,
+        /// The end column address
+        end: u8,
+    },
     /// Set up row start and end address (0x75)
-    RowAddress { start: u8, end: u8 },
+    RowAddress {
+        /// The start row address
+        start: u8,
+        /// The end row address
+        end: u8,
+    },
     /// Contrast Control (0x81)
     Contrast(u8),
     /// Re-map setting in Graphic Display Data RAM  (0xA0)
@@ -42,7 +53,7 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn send<DI>(self, display: &mut DI) -> Result<(), DisplayError>
+    pub(crate) fn send<DI>(self, display: &mut DI) -> Result<(), DisplayError>
     where
         DI: WriteOnlyDataCommand,
     {

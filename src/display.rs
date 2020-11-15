@@ -1,3 +1,4 @@
+//! main display module
 use crate::command::Command;
 use display_interface::{DataFormat::U8, DisplayError, WriteOnlyDataCommand};
 use embedded_graphics::{
@@ -9,16 +10,22 @@ use embedded_graphics::{
 use embedded_hal::blocking::delay::DelayMs;
 use embedded_hal::digital::v2::OutputPin;
 
-pub const DISPLAY_WIDTH: usize = 128;
-pub const DISPLAY_HEIGHT: usize = 128;
-pub const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT * 4 / 8;
+const DISPLAY_WIDTH: usize = 128;
+const DISPLAY_HEIGHT: usize = 128;
+const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT * 4 / 8;
 
+/// Represents the SSD1327 Display.
+///
+/// Use this struct to initialize the driver.
 pub struct Ssd1327<DI> {
     display: DI,
     buffer: [u8; BUFFER_SIZE],
 }
 
 impl<DI: WriteOnlyDataCommand> Ssd1327<DI> {
+    /// Creates the SSD1327 Display.
+    ///
+    /// Make sure to reset and initialize the display before use!
     pub fn new(display: DI) -> Self {
         Self {
             display,
@@ -26,6 +33,7 @@ impl<DI: WriteOnlyDataCommand> Ssd1327<DI> {
         }
     }
 
+    /// Resets the display.
     pub fn reset<RST, DELAY>(
         &mut self,
         rst: &mut RST,
@@ -47,6 +55,7 @@ impl<DI: WriteOnlyDataCommand> Ssd1327<DI> {
         Ok(())
     }
 
+    /// Initializes the display.
     pub fn init(&mut self) -> Result<(), DisplayError> {
         self.send_command(Command::DisplayOff)?;
         self.send_command(Command::ColumnAddress { start: 0, end: 127 })?;
@@ -70,10 +79,12 @@ impl<DI: WriteOnlyDataCommand> Ssd1327<DI> {
         Ok(())
     }
 
+    /// Allows to send custom commands to the display.
     pub fn send_command(&mut self, command: Command) -> Result<(), DisplayError> {
         command.send(&mut self.display)
     }
 
+    /// Flushes the display, and makes the output visible on the screen.
     pub fn flush(&mut self) -> Result<(), DisplayError> {
         self.display.send_data(U8(&self.buffer))
     }
