@@ -98,9 +98,9 @@ impl<DI> DrawTarget<Gray4> for Ssd1327<DI> {
 
         let idx = (point.x / 2 + point.y * 64) as usize;
         if point.x % 2 == 0 {
-            self.buffer[idx] = (color.luma() << 4) | self.buffer[idx];
+            self.buffer[idx] = update_upper_half(self.buffer[idx], color.luma());
         } else {
-            self.buffer[idx] = (color.luma() & 0x0f) | self.buffer[idx];
+            self.buffer[idx] = update_lower_half(self.buffer[idx], color.luma());
         }
 
         Ok(())
@@ -109,4 +109,65 @@ impl<DI> DrawTarget<Gray4> for Ssd1327<DI> {
     fn size(&self) -> Size {
         Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
     }
+}
+
+#[inline]
+fn update_upper_half(input: u8, color: u8) -> u8 {
+    color << 4 | (input & 0x0F)
+}
+
+#[inline]
+fn update_lower_half(input: u8, color: u8) -> u8 {
+    color & 0x0f | (input & 0xF0)
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn updates_upper_half_byte() {
+        let input = 0b00000000;
+        let color = 0b00001111;
+        assert_eq!(0b11110000, update_upper_half(input, color));
+
+        let input = 0b11110000;
+        let color = 0b00000000;
+        assert_eq!(0b00000000, update_upper_half(input, color));
+    }
+
+    #[test]
+    fn leaves_lower_untouched_on_upper_change() {
+        let input = 0b00000011;
+        let color = 0b00001111;
+        assert_eq!(0b11110011, update_upper_half(input, color));
+
+        let input = 0b11111111;
+        let color = 0b00000000;
+        assert_eq!(0b00001111, update_upper_half(input, color));
+    }
+
+    #[test]
+    fn updates_lower_half_byte() {
+        let input = 0b00000000;
+        let color = 0b00001111;
+        assert_eq!(0b00001111, update_lower_half(input, color));
+
+        let input = 0b00000000;
+        let color = 0b00000000;
+        assert_eq!(0b00000000, update_lower_half(input, color));
+    }
+
+    #[test]
+    fn leaves_upper_untouched_on_lower_change() {
+        let input = 0b11000011;
+        let color = 0b00001111;
+        assert_eq!(0b11001111, update_lower_half(input, color));
+
+        let input = 0b11111111;
+        let color = 0b00000000;
+        assert_eq!(0b11110000, update_lower_half(input, color));
+    }
+
 }
