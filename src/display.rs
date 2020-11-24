@@ -169,5 +169,4 @@ mod tests {
         let color = 0b00000000;
         assert_eq!(0b11110000, update_lower_half(input, color));
     }
-
 }
