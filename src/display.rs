@@ -106,6 +106,13 @@ impl<DI> DrawTarget<Gray4> for Ssd1327<DI> {
         Ok(())
     }
 
+    fn clear(&mut self, fill: Gray4) -> Result<(), Self::Error> {
+        let luma = fill.luma();
+        let byte = (luma << 4) | luma;
+        self.buffer.fill(byte);
+        Ok(())
+    }
+
     fn size(&self) -> Size {
         Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
     }
