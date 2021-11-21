@@ -1,11 +1,12 @@
 //! main display module
 use crate::command::Command;
 use display_interface::{DataFormat::U8, DisplayError, WriteOnlyDataCommand};
-use embedded_graphics::{
-    drawable::Pixel,
+use embedded_graphics_core::{
+    draw_target::DrawTarget,
+    geometry::{OriginDimensions, Size},
     pixelcolor::{Gray4, GrayColor},
-    prelude::Size,
-    DrawTarget,
+    prelude::*,
+    Pixel,
 };
 use embedded_hal::blocking::delay::DelayMs;
 use embedded_hal::digital::v2::OutputPin;
@@ -90,18 +91,27 @@ impl<DI: WriteOnlyDataCommand> Ssd1327<DI> {
     }
 }
 
-impl<DI> DrawTarget<Gray4> for Ssd1327<DI> {
+impl<DI: WriteOnlyDataCommand> DrawTarget for Ssd1327<DI> {
+    type Color = Gray4;
     type Error = DisplayError;
 
-    fn draw_pixel(&mut self, pixel: Pixel<Gray4>) -> Result<(), Self::Error> {
-        let Pixel(point, color) = pixel;
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        let bb = self.bounding_box();
 
-        let idx = (point.x / 2 + point.y * 64) as usize;
-        if point.x % 2 == 0 {
-            self.buffer[idx] = update_upper_half(self.buffer[idx], color.luma());
-        } else {
-            self.buffer[idx] = update_lower_half(self.buffer[idx], color.luma());
-        }
+        pixels
+            .into_iter()
+            .filter(|Pixel(p, _c)| bb.contains(*p))
+            .for_each(|Pixel(point, color)| {
+                let idx = (point.x / 2 + point.y * 64) as usize;
+                if point.x % 2 == 0 {
+                    self.buffer[idx] = update_upper_half(self.buffer[idx], color.luma());
+                } else {
+                    self.buffer[idx] = update_lower_half(self.buffer[idx], color.luma());
+                }
+            });
 
         Ok(())
     }
@@ -112,7 +122,12 @@ impl<DI> DrawTarget<Gray4> for Ssd1327<DI> {
         self.buffer.fill(byte);
         Ok(())
     }
+}
 
+impl<DI: WriteOnlyDataCommand> OriginDimensions for Ssd1327<DI>
+where
+    DI: WriteOnlyDataCommand,
+{
     fn size(&self) -> Size {
         Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
     }
