@@ -12,7 +12,7 @@ repository = "https://github.com/daschl/ssd1327"
 
 [dependencies]
 display-interface = "0.4"
-embedded-graphics = "0.6"
+embedded-graphics-core = "0.3"
 embedded-hal = "0.2"
 
 [dev-dependencies]
@@ -20,4 +20,3 @@ rppal = { version = "0.12", features = [ "hal" ] }
 embedded-graphics = "0.6.2"
 display-interface-spi = "0.4.0"
 linux-embedded-hal = "0.3.0"
-
