@@ -5,6 +5,7 @@ use embedded_graphics_core::{
     draw_target::DrawTarget,
     geometry::{OriginDimensions, Size},
     pixelcolor::{Gray4, GrayColor},
+    prelude::*,
     Pixel,
 };
 use embedded_hal::blocking::delay::DelayMs;
@@ -98,8 +99,11 @@ impl<DI: WriteOnlyDataCommand> DrawTarget for Ssd1327<DI> {
     where
         I: IntoIterator<Item = Pixel<Self::Color>>,
     {
+        let bb = self.bounding_box();
+
         pixels
             .into_iter()
+            .filter(|Pixel(p, _c)| bb.contains(*p))
             .for_each(|Pixel(point, color)| {
                 let idx = (point.x / 2 + point.y * 64) as usize;
                 if point.x % 2 == 0 {
