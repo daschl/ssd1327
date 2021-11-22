@@ -24,7 +24,7 @@ fn main() {
 
     // Init SPI
     let spii = SPIInterface::new(spi, dc, cs);
-    let mut disp = ssd1327::display::Ssd1327::new(spii);
+    let mut disp = ssd1327::display::Ssd1327::new(spii, ssd1327::size::DisplaySize128x128);
 
     // Reset & init
     disp.reset(&mut rst, &mut Delay).unwrap();

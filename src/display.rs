@@ -1,36 +1,44 @@
 //! main display module
-use crate::command::Command;
+use crate::{
+    command::Command,
+    size::{DisplaySize, NewZeroed},
+};
 use display_interface::{DataFormat::U8, DisplayError, WriteOnlyDataCommand};
 use embedded_graphics_core::{
     draw_target::DrawTarget,
-    geometry::{OriginDimensions, Size},
+    geometry::{Dimensions, OriginDimensions, Size},
     pixelcolor::{Gray4, GrayColor},
-    prelude::*,
     Pixel,
 };
 use embedded_hal::blocking::delay::DelayMs;
 use embedded_hal::digital::v2::OutputPin;
 
-const DISPLAY_WIDTH: usize = 128;
-const DISPLAY_HEIGHT: usize = 128;
-const BUFFER_SIZE: usize = DISPLAY_WIDTH * DISPLAY_HEIGHT * 4 / 8;
-
 /// Represents the SSD1327 Display.
 ///
 /// Use this struct to initialize the driver.
-pub struct Ssd1327<DI> {
+pub struct Ssd1327<DI, SIZE>
+where
+    SIZE: DisplaySize,
+{
     display: DI,
-    buffer: [u8; BUFFER_SIZE],
+    buffer: SIZE::Buffer,
+    // XXX: Figure out whether this duplicates buffer...
+    _size: SIZE,
 }
 
-impl<DI: WriteOnlyDataCommand> Ssd1327<DI> {
+impl<DI, SIZE> Ssd1327<DI, SIZE>
+where
+    DI: WriteOnlyDataCommand,
+    SIZE: DisplaySize,
+{
     /// Creates the SSD1327 Display.
     ///
     /// Make sure to reset and initialize the display before use!
-    pub fn new(display: DI) -> Self {
+    pub fn new(display: DI, _size: SIZE) -> Self {
         Self {
             display,
-            buffer: [0; BUFFER_SIZE],
+            _size,
+            buffer: NewZeroed::new_zeroed(),
         }
     }
 
@@ -59,8 +67,14 @@ impl<DI: WriteOnlyDataCommand> Ssd1327<DI> {
     /// Initializes the display.
     pub fn init(&mut self) -> Result<(), DisplayError> {
         self.send_command(Command::DisplayOff)?;
-        self.send_command(Command::ColumnAddress { start: 0, end: 127 })?;
-        self.send_command(Command::RowAddress { start: 0, end: 127 })?;
+        self.send_command(Command::ColumnAddress {
+            start: 0,
+            end: SIZE::WIDTH - 1,
+        })?;
+        self.send_command(Command::RowAddress {
+            start: 0,
+            end: SIZE::HEIGHT - 1,
+        })?;
         self.send_command(Command::Contrast(0x80))?;
         self.send_command(Command::SetRemap(0x51))?;
         self.send_command(Command::StartLine(0x00))?;
@@ -87,11 +101,15 @@ impl<DI: WriteOnlyDataCommand> Ssd1327<DI> {
 
     /// Flushes the display, and makes the output visible on the screen.
     pub fn flush(&mut self) -> Result<(), DisplayError> {
-        self.display.send_data(U8(&self.buffer))
+        self.display.send_data(U8(&self.buffer.as_mut()))
     }
 }
 
-impl<DI: WriteOnlyDataCommand> DrawTarget for Ssd1327<DI> {
+impl<DI, SIZE> DrawTarget for Ssd1327<DI, SIZE>
+where
+    DI: WriteOnlyDataCommand,
+    SIZE: DisplaySize,
+{
     type Color = Gray4;
     type Error = DisplayError;
 
@@ -106,10 +124,12 @@ impl<DI: WriteOnlyDataCommand> DrawTarget for Ssd1327<DI> {
             .filter(|Pixel(p, _c)| bb.contains(*p))
             .for_each(|Pixel(point, color)| {
                 let idx = (point.x / 2 + point.y * 64) as usize;
-                if point.x % 2 == 0 {
-                    self.buffer[idx] = update_upper_half(self.buffer[idx], color.luma());
-                } else {
-                    self.buffer[idx] = update_lower_half(self.buffer[idx], color.luma());
+                if let Some(byte) = self.buffer.as_mut().get_mut(idx) {
+                    if point.x % 2 == 0 {
+                        *byte = update_upper_half(*byte, color.luma());
+                    } else {
+                        *byte = update_lower_half(*byte, color.luma());
+                    }
                 }
             });
 
@@ -119,17 +139,20 @@ impl<DI: WriteOnlyDataCommand> DrawTarget for Ssd1327<DI> {
     fn clear(&mut self, fill: Gray4) -> Result<(), Self::Error> {
         let luma = fill.luma();
         let byte = (luma << 4) | luma;
-        self.buffer.fill(byte);
+        for b in self.buffer.as_mut() {
+            *b = byte;
+        }
         Ok(())
     }
 }
 
-impl<DI: WriteOnlyDataCommand> OriginDimensions for Ssd1327<DI>
+impl<DI, SIZE> OriginDimensions for Ssd1327<DI, SIZE>
 where
     DI: WriteOnlyDataCommand,
+    SIZE: DisplaySize,
 {
     fn size(&self) -> Size {
-        Size::new(DISPLAY_WIDTH as u32, DISPLAY_HEIGHT as u32)
+        Size::new(SIZE::WIDTH as u32, SIZE::HEIGHT as u32)
     }
 }
 
