@@ -1,10 +1,10 @@
 use {
     display_interface_spi::SPIInterface,
     embedded_graphics::{
-        fonts::{Font24x32, Text},
+        mono_font::{ascii::FONT_10X20, MonoTextStyleBuilder},
         pixelcolor::Gray4,
         prelude::*,
-        text_style,
+        text::{Baseline, Text},
     },
     linux_embedded_hal::Delay,
     rppal::{
@@ -24,7 +24,7 @@ fn main() {
 
     // Init SPI
     let spii = SPIInterface::new(spi, dc, cs);
-    let mut disp = ssd1327::display::Ssd1327::new(spii);
+    let mut disp = ssd1327::display::Ssd1327::new(spii, ssd1327::size::DisplaySize128x128);
 
     // Reset & init
     disp.reset(&mut rst, &mut Delay).unwrap();
@@ -34,13 +34,13 @@ fn main() {
     disp.clear(Gray4::new(0)).unwrap();
     disp.flush().unwrap();
 
+    let text_style = MonoTextStyleBuilder::new()
+        .font(&FONT_10X20)
+        .text_color(Gray4::new(0b0000_1111))
+        .build();
+
     // Write "Hello" to the display
-    Text::new("Hello", Point::new(0, 0))
-        .into_styled(text_style!(
-            font = Font24x32,
-            text_color = Gray4::new(0b0000_1111),
-            background_color = Gray4::new(0),
-        ))
+    Text::with_baseline("Hello", Point::zero(), text_style, Baseline::Top)
         .draw(&mut disp)
         .unwrap();
     disp.flush().unwrap();
