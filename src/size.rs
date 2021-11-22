@@ -32,3 +32,11 @@ impl DisplaySize for DisplaySize128x128 {
     const HEIGHT: u8 = 128;
     type Buffer = [u8; Self::WIDTH as usize * Self::HEIGHT as usize * 4 / 8];
 }
+
+/// Size information for the 128x96 display
+pub struct DisplaySize128x96;
+impl DisplaySize for DisplaySize128x96 {
+    const WIDTH: u8 = 128;
+    const HEIGHT: u8 = 96;
+    type Buffer = [u8; Self::WIDTH as usize * Self::HEIGHT as usize * 4 / 8];
+}
